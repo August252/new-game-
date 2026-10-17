@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Shape Wars</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #090a0f;
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Authentication Screen */
+        .auth-container, .selection-container {
+            position: absolute;
+            width: 360px;
+            padding: 30px;
+            background: rgba(20, 24, 38, 0.95);
+            border: 2px solid #00f0ff;
+            border-radius: 12px;
+            box-shadow: 0 0 20px #00f0ff44;
+            text-align: center;
+            z-index: 10;
+        }
+        h2 {
+            margin-bottom: 20px;
+            color: #00f0ff;
+            text-shadow: 0 0 8px #00f0ff;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            background: #0f1322;
+            border: 1px solid #00f0ff;
+            color: #fff;
+            border-radius: 6px;
+            outline: none;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            margin-top: 15px;
+            background: #00f0ff;
+            border: none;
+            color: #090a0f;
+            font-weight: bold;
+            font-size: 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            box-shadow: 0 0 10px #00f0ff;
+            transition: 0.2s;
+        }
+        button:hover {
+            background: #ff007f;
+            color: #fff;
+            box-shadow: 0 0 15px #ff007f;
+        }
+
+        /* Shape Selection Screen */
+        .selection-container {
+            display: none;
+            width: 420px;
+        }
+        .shape-options {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+        }
+        .shape-card {
+            width: 90px;
+            height: 90px;
+            border: 2px solid #333;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: 0.2s;
+            background: #121626;
+        }
+        .shape-card.selected {
+            border-color: #00f0ff;
+            box-shadow: 0 0 15px #00f0ff;
+            background: #1a223d;
+        }
+        .preview-square { width: 40px; height: 40px; background: #00f0ff; }
+        .preview-rectangle { width: 50px; height: 30px; background: #ff007f; }
+        .preview-circle { width: 40px; height: 40px; background: #39ff14; border-radius: 50%; }
+
+        /* Game Screen */
+        #game-wrapper {
+            display: none;
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background: radial-gradient(circle at center, #111528 0%, #05070c 100%);
+        }
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        /* UI Elements */
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        .health-bar-container {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            width: 250px;
+            height: 25px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 2px solid #00f0ff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
+        }
+        #health-bar {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #ff0055, #39ff14);
+            transition: width 0.2s linear;
+        }
+        #score-display {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 22px;
+            color: #00f0ff;
+            text-shadow: 0 0 8px #00f0ff;
+            font-weight: bold;
+        }
+
+        /* Touch Controls */
+        .touch-zone-left, .touch-zone-right {
+            position: absolute;
+            bottom: 0;
+            width: 30vw;
+            height: 100%;
+            pointer-events: auto;
+        }
+        .touch-zone-left { left: 0; }
+        .touch-zone-right { left: 30vw; }
+
+        .dpad-container {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 130px;
+            height: 130px;
+            pointer-events: auto;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .dpad-btn {
+            width: 60px;
+            height: 55px;
+            background: rgba(0, 240, 255, 0.2);
+            border: 2px solid #00f0ff;
+            color: #00f0ff;
+            font-size: 24px;
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            touch-action: manipulation;
+        }
+        .dpad-btn:active {
+            background: rgba(0, 240, 255, 0.6);
+        }
+
+        /* Power-Up Button */
+        #powerup-btn {
+            position: absolute;
+            bottom: 160px;
+            right: 20px;
+            width: 130px;
+            height: 50px;
+            background: linear-gradient(45deg, #ff007f, #ff00ff);
+            border: 2px solid #fff;
+            color: #fff;
+            font-weight: bold;
+            font-size: 14px;
+            border-radius: 8px;
+            box-shadow: 0 0 15px #ff007f;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            pointer-events: auto;
+            animation: pulse 1s infinite alternate;
+            cursor: pointer;
+        }
+        @keyframes pulse {
+            from { transform: scale(1); box-shadow: 0 0 10px #ff007f; }
+            to { transform: scale(1.05); box-shadow: 0 0 25px #ff007f; }
+        }
+
+        /* Game Over Screen */
+        #game-over-screen {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(5, 7, 12, 0.9);
+            z-index: 20;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        #game-over-screen h1 {
+            font-size: 48px;
+            color: #ff0055;
+            text-shadow: 0 0 20px #ff0055;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Auth Screen -->
+    <div class="auth-container" id="auth-screen">
+        <h2>Shape Wars</h2>
+        <input type="email" id="email" placeholder="Gmail Address" required>
+        <input type="password" id="password" placeholder="Password" required>
+        <button id="auth-btn">Play Game</button>
+    </div>
+
+    <!-- Selection Screen -->
+    <div class="selection-container" id="selection-screen">
+        <h2>Choose Your Shape</h2>
+        <div class="shape-options">
+            <div class="shape-card selected" data-shape="square">
+                <div class="preview-square"></div>
+            </div>
+            <div class="shape-card" data-shape="rectangle">
+                <div class="preview-rectangle"></div>
+            </div>
+            <div class="shape-card" data-shape="circle">
+                <div class="preview-circle"></div>
+            </div>
+        </div>
+        <button id="start-btn">PLAY NORMAL MODE</button>
+    </div>
+
+    <!-- Game Wrapper -->
+    <div id="game-wrapper">
+        <canvas id="gameCanvas"></canvas>
+        <div id="ui-layer">
+            <div class="health-bar-container">
+                <div id="health-bar"></div>
+            </div>
+            <div id="score-display">Score: 0 | Kills: 0</div>
+            
+            <!-- Mobile Touch Controls -->
+            <div class="touch-zone-left" id="touch-left"></div>
+            <div class="touch-zone-right" id="touch-right"></div>
+            
+            <div class="dpad-container">
+                <div class="dpad-btn" id="btn-up">▲</div>
+                <div class="dpad-btn" id="btn-down">▼</div>
+            </div>
+
+            <div id="powerup-btn">POWER UP!</div>
+        </div>
+    </div>
+
+    <!-- Game Over Screen -->
+    <div id="game-over-screen">
+        <h1>GAME OVER</h1>
+        <p id="final-score" style="margin-bottom: 20px; font-size: 20px; color: #00f0ff;"></p>
+        <button id="restart-btn" style="width: 200px;">TRY AGAIN</button>
+    </div>
+
+    <script>
+        // --- Web Audio API Synthesizer ---
+        const AudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        function playSound(type) {
+            if (AudioCtx.state === 'suspended') AudioCtx.resume();
+            const osc = AudioCtx.createOscillator();
+            const gain = AudioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(AudioCtx.destination);
+
+            const now = AudioCtx.currentTime;
+
+            if (type === 'shoot') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(600, now);
+                osc.frequency.exponentialRampToValueAtTime(100, now + 0.1);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.1);
+                osc.start(now);
+                osc.stop(now + 0.1);
+            } else if (type === 'hit') {
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(150, now);
+                osc.frequency.linearRampToValueAtTime(40, now + 0.15);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.15);
+                osc.start(now);
+                osc.stop(now + 0.15);
+            } else if (type === 'heal') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(300, now);
+                osc.frequency.exponentialRampToValueAtTime(800, now + 0.25);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+                osc.start(now);
+                osc.stop(now + 0.25);
+            } else if (type === 'powerup') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(400, now);
+                osc.frequency.exponentialRampToValueAtTime(1200, now + 0.4);
+                gain.gain.setValueAtTime(0.4, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.4);
+                osc.start(now);
+                osc.stop(now + 0.4);
+            } else if (type === 'explode') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(100, now);
+                osc.frequency.linearRampToValueAtTime(20, now + 0.3);
+                gain.gain.setValueAtTime(0.5, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.3);
+                osc.start(now);
+                osc.stop(now + 0.3);
+            }
+        }
+
+        // --- State Management ---
+        let selectedShape = 'square';
+        let killsCount = 0;
+        let score = 0;
+        let health = 100; // 100% total HP. 5 enemy bullets hit = 25% drop (each hit = 5% damage)
+        let gameActive = false;
+        let keys = {};
+        let touchMove = { left: false, right: false, up: false, down: false };
+
+        // --- Auth & Navigation ---
+        document.getElementById('auth-btn').addEventListener('click', () => {
+            const email = document.getElementById('email').value;
+            if (email && email.includes('@')) {
+                document.getElementById('auth-screen').style.display = 'none';
+                document.getElementById('selection-screen').style.display = 'block';
+            } else {
+                alert('Please enter a valid Gmail address.');
+            }
+        });
+
+        // Shape Selection
+        document.querySelectorAll('.shape-card').forEach(card => {
+            card.addEventListener('click', () => {
+                document.querySelectorAll('.shape-card').forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                selectedShape = card.dataset.shape;
+            });
+        });
+
+        document.getElementById('start-btn').addEventListener('click', () => {
+            document.getElementById('selection-screen').style.display = 'none';
+            document.getElementById('game-wrapper').style.display = 'block';
+            initGame();
+        });
+
+        document.getElementById('restart-btn').addEventListener('click', () => {
+            document.getElementById('game-over-screen').style.display = 'none';
+            initGame();
+        });
+
+        // --- Game Setup ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // Keyboard Controls
+        window.addEventListener('keydown', e => keys[e.code] = true);
+        window.addEventListener('keyup', e => keys[e.code] = false);
+
+        // Touch Control Listeners
+        const setupTouch = (id, key) => {
+            const el = document.getElementById(id);
+            el.addEventListener('touchstart', (e) => { e.preventDefault(); touchMove[key] = true; });
+            el.addEventListener('touchend', (e) => { e.preventDefault(); touchMove[key] = false; });
+        };
+        setupTouch('touch-left', 'left');
+        setupTouch('touch-right', 'right');
+        setupTouch('btn-up', 'up');
+        setupTouch('btn-down', 'down');
+
+        // Power-Up Button
+        const powerupBtn = document.getElementById('powerup-btn');
+        powerupBtn.addEventListener('click', triggerPowerUp);
+        powerupBtn.addEventListener('touchstart', (e) => { e.preventDefault(); triggerPowerUp(); });
+
+        function triggerPowerUp() {
+            if (powerupBtn.style.display === 'flex') {
+                playSound('powerup');
+                powerupBtn.style.display = 'none';
+                // Powerup Effect: Fire spread shots & clear nearby bullets
+                for (let i = -2; i <= 2; i++) {
+                    bullets.push(new Bullet(player.x, player.y, i * 3, -12, true));
+                }
+                enemyBullets = [];
+            }
+        }
+
+        // --- Entities ---
+        let player, bullets, enemies, enemyBullets, particles, healthPickups;
+        let lastAutoShoot = 0;
+
+        class Player {
+            constructor(shape) {
+                this.x = canvas.width / 2;
+                this.y = canvas.height - 100;
+                this.speed = 6;
+                this.shape = shape;
+                this.width = shape === 'rectangle' ? 60 : 40;
+                this.height = shape === 'rectangle' ? 30 : 40;
+                this.color = shape === 'square' ? '#00f0ff' : shape === 'rectangle' ? '#ff007f' : '#39ff14';
+            }
+
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = this.color;
+                if (this.shape === 'square' || this.shape === 'rectangle') {
+                    ctx.fillRect(this.x - this.width / 2, this.y - this.height / 2, this.width, this.height);
+                } else if (this.shape === 'circle') {
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.width / 2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.shadowBlur = 0;
+            }
+
+            update() {
+                if ((keys['ArrowLeft'] || keys['KeyA'] || touchMove.left) && this.x - this.width / 2 > 0) {
+                    this.x -= this.speed;
+                }
+                if ((keys['ArrowRight'] || keys['KeyD'] || touchMove.right) && this.x + this.width / 2 < canvas.width) {
+                    this.x += this.speed;
+                }
+                if ((keys['ArrowUp'] || keys['KeyW'] || touchMove.up) && this.y - this.height / 2 > 0) {
+                    this.y -= this.speed;
+                }
+                if ((keys['ArrowDown'] || keys['KeyS'] || touchMove.down) && this.y + this.height / 2 < canvas.height) {
+                    this.y += this.speed;
+                }
+            }
+        }
+
+        class Bullet {
+            constructor(x, y, vx, vy, isPlayer = false) {
+                this.x = x;
+                this.y = y;
+                this.vx = vx;
+                this.vy = vy;
+                this.isPlayer = isPlayer;
+                this.radius = isPlayer ? 4 : 5;
+                this.color = isPlayer ? '#00f0ff' : '#ff0055';
+            }
+
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+            }
+        }
+
+        class Enemy {
+            constructor() {
+                this.x = Math.random() * (canvas.width - 60) + 30;
+                this.y = -40;
+                this.speed = Math.random() * 1.5 + 1;
+                this.lastShoot = Date.now();
+                this.shootInterval = Math.random() * 2000 + 1500;
+            }
+
+            draw() {
+                ctx.fillStyle = '#ff0055';
+                ctx.shadowBlur = 12;
+                ctx.shadowColor = '#ff0055';
+                // Single barrel shooter representation
+                ctx.fillRect(this.x - 20, this.y - 20, 40, 40);
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(this.x - 4, this.y + 15, 8, 10);
+                ctx.shadowBlur = 0;
+            }
+
+            update() {
+                this.y += this.speed;
+                if (Date.now() - this.lastShoot > this.shootInterval) {
+                    enemyBullets.push(new Bullet(this.x, this.y + 20, 0, 5, false));
+                    this.lastShoot = Date.now();
+                }
+            }
+        }
+
+        class HealthPickup {
+            constructor(x, y, isHalfQuarter = false) {
+                this.x = x;
+                this.y = y;
+                this.speed = 2;
+                this.radius = 14;
+                this.healAmount = isHalfQuarter ? 12.5 : 25; // Quarter = 25%, Half of Quarter = 12.5%
+            }
+
+            draw() {
+                ctx.fillStyle = '#39ff14';
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = '#39ff14';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            }
+
+            update() {
+                this.y += this.speed;
+            }
+        }
+
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 6;
+                this.vy = (Math.random() - 0.5) * 6;
+                this.alpha = 1;
+                this.color = color;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = this.alpha;
+    
